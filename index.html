@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>YouTube Tracker</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="dot"></div>
+        <div>
+          <div class="title">YouTube Tracker</div>
+          <div class="sub">Shorts Günlük Takip</div>
+        </div>
+      </div>
+
+      <div class="nav">
+        <button class="tab active" data-tab="overview">Genel</button>
+        <button class="tab" data-tab="analysis">Analiz</button>
+      </div>
+
+      <div class="panel">
+        <div class="label">Tarih Aralığı</div>
+        <select id="range">
+          <option value="7">Son 7 gün</option>
+          <option value="28" selected>Son 28 gün</option>
+          <option value="90">Son 90 gün</option>
+          <option value="all">Tümü</option>
+        </select>
+
+        <div class="label">Grafik Metrik</div>
+        <select id="metric">
+          <option value="Toplam Izlenme">Toplam İzlenme</option>
+          <option value="Gunluk Artis">Günlük Artış</option>
+          <option value="Abone Sayisi">Abone</option>
+          <option value="Video Sayisi">Video</option>
+        </select>
+
+        <div class="label">Grafik Tipi</div>
+        <select id="chartType">
+          <option value="line" selected>Çizgi</option>
+          <option value="bar">Bar</option>
+        </select>
+
+        <button id="refresh" class="btn">Veriyi Yenile</button>
+        <div id="status" class="status">Hazır</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="top">
+        <h1>YouTube Shorts Günlük Takip</h1>
+        <div class="pill">Kaynak: Google Sheets (CSV)</div>
+      </header>
+
+      <section class="cards">
+        <div class="card">
+          <div class="k">Toplam İzlenme</div>
+          <div class="v" id="kpiViews">-</div>
+        </div>
+        <div class="card">
+          <div class="k">Günlük Artış</div>
+          <div class="v" id="kpiDaily">-</div>
+        </div>
+        <div class="card">
+          <div class="k">Abone</div>
+          <div class="v" id="kpiSubs">-</div>
+        </div>
+        <div class="card">
+          <div class="k">Video</div>
+          <div class="v" id="kpiVideos">-</div>
+        </div>
+      </section>
+
+      <section class="content">
+        <div class="glass">
+          <div class="glassHead">
+            <div class="glassTitle" id="chartTitle">Grafik</div>
+            <div class="small" id="chartHint">Seçimlere göre güncellenir</div>
+          </div>
+          <div class="chartWrap">
+            <canvas id="chart"></canvas>
+          </div>
+        </div>
+
+        <div class="glass hide" id="analysisBox">
+          <div class="glassHead">
+            <div class="glassTitle">Analiz</div>
+            <div class="small">Basit özet ve trend</div>
+          </div>
+          <div class="grid2">
+            <div class="mini">
+              <div class="k">Son 7 gün ort. günlük artış</div>
+              <div class="v" id="avg7">-</div>
+            </div>
+            <div class="mini">
+              <div class="k">Son 28 gün ort. günlük artış</div>
+              <div class="v" id="avg28">-</div>
+            </div>
+            <div class="mini">
+              <div class="k">En iyi gün (günlük artış)</div>
+              <div class="v" id="bestDay">-</div>
+            </div>
+            <div class="mini">
+              <div class="k">Toplam gün sayısı</div>
+              <div class="v" id="daysCount">-</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="foot">
+        <span>© Dashboard</span>
+      </footer>
+    </main>
+  </div>
+
+<script>
+  // ✅ senin CSV linkin
+  const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS5lQ787MnRiHRa3gZPhp2_GYS7_tEYjIb5uhUnfo_gcy4ANyE2oczbp9q0FSUqrZwErjcAWwHosdXp/pub?output=csv";
+
+  const el = (id) => document.getElementById(id);
+
+  function fmtTR(n){
+    // tam sayı + TR nokta
+    const x = Number.isFinite(n) ? Math.trunc(n) : 0;
+    return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  }
+
+  function clampNonNegative(n){
+    n = Math.trunc(Number(n || 0));
+    return n < 0 ? 0 : n;
+  }
+
+  function parseCSV(text){
+    // Basit CSV parser: hücrelerde virgül yok varsayıyoruz (bizim sheet için uygun)
+    const lines = text.trim().split(/\r?\n/);
+    const header = lines[0].split(",");
+    const rows = [];
+
+    for(let i=1;i<lines.length;i++){
+      const cols = lines[i].split(",");
+      const obj = {};
+      header.forEach((h, idx) => obj[h.trim()] = (cols[idx] ?? "").trim());
+      rows.push(obj);
+    }
+    return rows;
+  }
+
+  function pickRange(rows, rangeVal){
+    if(rangeVal === "all") return rows;
+    const n = parseInt(rangeVal, 10);
+    if(!Number.isFinite(n) || n <= 0) return rows;
+    return rows.slice(Math.max(0, rows.length - n));
+  }
+
+  let chart;
+
+  function buildChart(labels, values, type, title){
+    if(chart) chart.destroy();
+
+    const ctx = el("chart");
+    chart = new Chart(ctx, {
+      type: type,
+      data: {
+        labels,
+        datasets: [{
+          label: title,
+          data: values,
+          borderWidth: 2,
+          pointRadius: type === "line" ? 2 : 0,
+          tension: 0.25
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { mode: "index", intersect: false }
+        },
+        interaction: { mode: "index", intersect: false },
+        scales: {
+          x: {
+            ticks: { color: "rgba(255,255,255,0.7)" },
+            grid: { color: "rgba(255,255,255,0.06)" }
+          },
+          y: {
+            ticks: { color: "rgba(255,255,255,0.7)" },
+            grid: { color: "rgba(255,255,255,0.06)" }
+          }
+        }
+      }
+    });
+  }
+
+  async function load(){
+    el("status").textContent = "Yükleniyor...";
+    try{
+      const res = await fetch(CSV_URL, { cache: "no-store" });
+      const text = await res.text();
+      const rowsRaw = parseCSV(text);
+
+      // Tarihe göre sırala
+      const rows = rowsRaw
+        .map(r => ({
+          date: r["Tarih"],
+          views: clampNonNegative(r["Toplam Izlenme"]),
+          daily: clampNonNegative(r["Gunluk Artis"]),
+          subs: clampNonNegative(r["Abone Sayisi"]),
+          videos: clampNonNegative(r["Video Sayisi"])
+        }))
+        .filter(r => r.date)
+        .sort((a,b) => a.date.localeCompare(b.date));
+
+      if(rows.length === 0){
+        el("status").textContent = "Veri yok (Sheet boş)";
+        return;
+      }
+
+      // KPI (son satır)
+      const last = rows[rows.length - 1];
+      el("kpiViews").textContent = fmtTR(last.views);
+      el("kpiDaily").textContent = fmtTR(last.daily);
+      el("kpiSubs").textContent  = fmtTR(last.subs);
+      el("kpiVideos").textContent= fmtTR(last.videos);
+
+      // Analiz kutusu
+      el("daysCount").textContent = fmtTR(rows.length);
+
+      function avgLast(n){
+        const slice = rows.slice(Math.max(0, rows.length - n));
+        const sum = slice.reduce((acc, r) => acc + r.daily, 0);
+        return slice.length ? Math.round(sum / slice.length) : 0;
+      }
+
+      el("avg7").textContent = fmtTR(avgLast(7));
+      el("avg28").textContent = fmtTR(avgLast(28));
+
+      const best = rows.reduce((best, r) => (r.daily > best.daily ? r : best), rows[0]);
+      el("bestDay").textContent = `${best.date} • ${fmtTR(best.daily)}`;
+
+      // Seçimler
+      const rangeVal = el("range").value;
+      const metric = el("metric").value;
+      const chartType = el("chartType").value;
+
+      const subset = pickRange(rows, rangeVal);
+
+      const labels = subset.map(r => r.date);
+      let values, title;
+
+      if(metric === "Toplam Izlenme"){ values = subset.map(r => r.views); title = "Toplam İzlenme"; }
+      if(metric === "Gunluk Artis"){ values = subset.map(r => r.daily); title = "Günlük Artış"; }
+      if(metric === "Abone Sayisi"){ values = subset.map(r => r.subs); title = "Abone"; }
+      if(metric === "Video Sayisi"){ values = subset.map(r => r.videos); title = "Video"; }
+
+      el("chartTitle").textContent = title;
+      buildChart(labels, values, chartType, title);
+
+      el("status").textContent = "Güncel ✅";
+    }catch(e){
+      console.error(e);
+      el("status").textContent = "Hata: CSV okunamadı";
+    }
+  }
+
+  // TAB sistemi
+  document.querySelectorAll(".tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+
+      const tab = btn.dataset.tab;
+      if(tab === "analysis"){
+        el("analysisBox").classList.remove("hide");
+      }else{
+        el("analysisBox").classList.add("hide");
+      }
+    });
+  });
+
+  ["range","metric","chartType"].forEach(id => el(id).addEventListener("change", load));
+  el("refresh").addEventListener("click", load);
+
+  load();
+</script>
+</body>
+</html>

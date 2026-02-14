@@ -1,0 +1,240 @@
+:root{
+  --bg:#0b0f14;
+  --panel: rgba(255,255,255,0.05);
+  --border: rgba(255,255,255,0.10);
+  --text: rgba(255,255,255,0.92);
+  --muted: rgba(255,255,255,0.62);
+  --shadow: 0 16px 60px rgba(0,0,0,0.45);
+}
+
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+body{
+  margin:0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  color: var(--text);
+  background: var(--bg);
+}
+
+.app{
+  display:flex;
+  height:100vh;          /* ekran boyu */
+  overflow:hidden;       /* dış scroll yok */
+}
+
+/* Sidebar */
+.sidebar{
+  width: 280px;
+  padding: 18px;
+  border-right: 1px solid var(--border);
+  background: rgba(255,255,255,0.02);
+}
+
+.brand{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.dot{
+  width:12px;height:12px;border-radius:50%;
+  background: rgba(255,255,255,0.65);
+}
+
+.title{ font-weight:700; letter-spacing:0.2px; }
+.sub{ font-size:12px; color: var(--muted); margin-top:2px; }
+
+.nav{ display:flex; gap:10px; margin:16px 0; }
+.tab{
+  flex:1;
+  padding:10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.03);
+  color: var(--text);
+  cursor:pointer;
+}
+.tab.active{
+  background: rgba(255,255,255,0.09);
+}
+
+.panel{
+  margin-top: 10px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.label{
+  font-size:12px;
+  color: var(--muted);
+  margin: 12px 0 6px;
+}
+
+select{
+  width:100%;
+  padding:10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,0.25);
+  color: var(--text);
+  outline:none;
+}
+
+.btn{
+  width:100%;
+  margin-top:14px;
+  padding:10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.08);
+  color: var(--text);
+  cursor:pointer;
+}
+.btn:hover{ background: rgba(255,255,255,0.12); }
+
+.status{
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Main */
+.main{
+  flex:1;
+  padding: 18px 20px;
+  overflow:hidden; /* ana gövde kendi içinde düzenli */
+}
+
+.top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  margin-bottom: 14px;
+}
+h1{ font-size: 22px; margin:0; }
+
+.pill{
+  font-size: 12px;
+  color: var(--muted);
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.03);
+}
+
+/* KPI cards */
+.cards{
+  display:grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.card{
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  padding: 14px 16px;
+}
+.k{ font-size:12px; color: var(--muted); }
+.v{ font-size: 26px; font-weight: 800; margin-top: 6px; }
+
+/* Content */
+.content{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  height: calc(100vh - 18px - 18px - 60px - 120px); /* kabaca sabit yükseklik */
+}
+
+.glass{
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  padding: 14px;
+  height: 100%;
+  overflow:hidden;
+}
+
+.glassHead{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  margin-bottom: 10px;
+}
+.glassTitle{ font-weight:800; }
+.small{ font-size:12px; color: var(--muted); }
+
+.chartWrap{
+  height: calc(100% - 34px);
+}
+
+.grid2{
+  display:grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+.mini{
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,0.18);
+}
+.mini .v{ font-size:20px; }
+
+.hide{ display:none; }
+
+.foot{
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* responsive */
+@media (max-width: 1100px){
+  .cards{ grid-template-columns: repeat(2, 1fr); }
+  .sidebar{ width: 240px; }
+}
+@media (max-width: 780px){
+  .app{ flex-direction: column; }
+  .sidebar{ width: 100%; border-right:none; border-bottom:1px solid var(--border); }
+  .main{ height: calc(100vh - 280px); }
+}
+
+
+/* === Modern Select Box === */
+select{
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  background:
+    linear-gradient(45deg, transparent 50%, #aaa 50%),
+    linear-gradient(135deg, #aaa 50%, transparent 50%),
+    linear-gradient(to right, rgba(255,255,255,0.08), rgba(255,255,255,0.08));
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 13px) 55%,
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+
+  padding-right: 40px;
+}
+
+select option{
+  background:#0b0f14;
+  color:white;
+}
